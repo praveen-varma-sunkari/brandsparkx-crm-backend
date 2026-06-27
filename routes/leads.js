@@ -1,11 +1,11 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 
 // GET all leads
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await db.execute('SELECT * FROM leads ORDER BY created_at DESC');
+    const [rows] = await db.execute('SELECT * FROM leads ORDER BY createdAt DESC');
     res.json(rows);
   } catch (err) {
     console.error('GET /api/leads error:', err);
@@ -21,8 +21,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'clientName and contactInfo are required' });
     }
     const [result] = await db.execute(
-      `INSERT INTO leads (clientName, contactInfo, serviceInterest, budget, location, leadSource, priority, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO leads (clientName, contactInfo, serviceInterest, budget, location, leadSource, priority, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [clientName, contactInfo, serviceInterest||null, budget||null, location||null, leadSource||null, priority||'Warm', notes||null]
     );
     res.status(201).json({ message: 'Lead captured successfully', id: result.insertId });
@@ -32,28 +31,22 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT status / owner / priority / notes update
+// PUT update lead
 router.put('/:id/status', async (req, res) => {
   try {
     const { status, owner, priority, notes } = req.body;
-    const validStatuses = ['New', 'In Progress', 'Closed'];
-    if (status && !validStatuses.includes(status)) {
-      return res.status(400).json({ error: `Status must be one of: ${validStatuses.join(', ')}` });
-    }
-    // Build dynamic update from provided fields
     const fields = [], values = [];
-    if (status !== undefined)   { fields.push('status=?');   values.push(status); }
-    if (owner !== undefined)    { fields.push('owner=?');    values.push(owner); }
-    if (priority !== undefined) { fields.push('priority=?'); values.push(priority); }
-    if (notes !== undefined)    { fields.push('notes=?');    values.push(notes); }
+    if (status !== undefined)   { fields.push('followUpStatus=?'); values.push(status); }
+    if (owner !== undefined)    { fields.push('owner=?');          values.push(owner); }
+    if (priority !== undefined) { fields.push('priority=?');       values.push(priority); }
+    if (notes !== undefined)    { fields.push('notes=?');          values.push(notes); }
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
-
     values.push(req.params.id);
-    const [result] = await db.execute(`UPDATE leads SET ${fields.join(', ')}, updated_at=NOW() WHERE id=?`, values);
+    const [result] = await db.execute(`UPDATE leads SET ${fields.join(', ')} WHERE id=?`, values);
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Lead not found' });
-    res.json({ message: 'Lead updated', status });
+    res.json({ message: 'Lead updated' });
   } catch (err) {
-    console.error('PUT /api/leads/:id/status error:', err);
+    console.error('PUT error:', err);
     res.status(500).json({ error: 'Failed to update lead' });
   }
 });
